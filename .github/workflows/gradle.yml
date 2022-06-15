@@ -1,0 +1,54 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+# This workflow will build a Java project with Gradle and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
+
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    - name: Build with Gradle
+      uses: gradle/gradle-build-action@0d13054264b0bb894ded474f08ebb30921341cee
+      with:
+        arguments: shadowJar
+    - name: Rsync and Deploy
+      uses: blbecker/rsync-deploy@v1.0
+      with:
+        # The hostname of the host to rsync to
+        destination_host: 188.120.242.182
+        # The directory on the remote host to rsync to
+        destination_path: "/root/apps/backend"
+        # Base64 encoded SSH Private key to use for deployment
+        deployment_key: ${{ secrets.RSYNC }}
+        # The user with which to rsync the website to destination
+        deployment_user: root
+        # The local directory to deploy to the remote host
+        source_dir: "build/libs/"
+    - name: SSH Command
+      uses: D3rHase/ssh-command-action@v0.2.1
+      with:
+        HOST: 188.120.242.182
+        USER: root
+        PRIVATE_SSH_KEY: ${{ secrets.SSH }}
+        COMMAND: "systemctl restart backend"
